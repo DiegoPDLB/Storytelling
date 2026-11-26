@@ -1,9 +1,11 @@
+import os
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # ---------------------------------------------------------
-# 1. PAGE CONFIGURATION & CUSTOM CSS STYLING
+# 1. PAGE CONFIGURATION & LIGHT EXECUTIVE CSS STYLING
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Mexico Automotive Market Strategy (2016-2026)",
@@ -13,31 +15,46 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Clean executive typography and spacing */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        max-width: 1350px;
+    /* Force clean Light Theme across main app & header */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background-color: #F4F6F9 !important;
+        color: #0F172A !important;
     }
 
-    /* REDESIGNED DARK EXECUTIVE SIDEBAR */
-    section[data-testid="stSidebar"] {
-        background-color: #0F2537;
-        border-right: 2px solid #1E3A5F;
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1360px;
     }
-    section[data-testid="stSidebar"] * {
+
+    /* Base light-mode text */
+    .stApp p, .stApp span, .stApp label, .stApp li {
+        color: #1E293B;
+    }
+    .stApp h2, .stApp h3, .stApp h4 {
+        color: #0F2537 !important;
+    }
+
+    /* DARK EXECUTIVE SIDEBAR */
+    section[data-testid="stSidebar"] {
+        background-color: #0F2537 !important;
+        border-right: 1px solid #1E3A5F;
+    }
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] div {
         color: #F8FAFC !important;
     }
-    section[data-testid="stSidebar"] .stMarkdown h3 {
+    section[data-testid="stSidebar"] h3 {
         color: #FFFFFF !important;
-        font-size: 1.15rem;
-        letter-spacing: 0.5px;
+        font-size: 1.05rem;
+        letter-spacing: 0.6px;
         text-transform: uppercase;
         border-bottom: 2px solid #C0392B;
         padding-bottom: 0.5rem;
         margin-bottom: 0.8rem;
     }
-    /* Sidebar input boxes & multiselect tags */
     section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
         background-color: #16324A !important;
         border: 1px solid #2C5282 !important;
@@ -48,66 +65,161 @@ st.markdown("""
         color: #FFFFFF !important;
         border-radius: 4px;
     }
-    /* Sidebar metadata card */
     .sidebar-card {
         background-color: #16324A;
         border-left: 3px solid #C0392B;
-        padding: 0.85rem 1rem;
+        padding: 0.9rem 1rem;
         border-radius: 0 6px 6px 0;
-        font-size: 0.83rem;
-        line-height: 1.45;
-        margin-top: 1rem;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        margin-top: 1.2rem;
         color: #E2E8F0 !important;
     }
 
-    /* Executive Header Banner */
+    /* EXECUTIVE HEADER BANNER (HIGH SPECIFICITY FOR WHITE TEXT) */
     .exec-banner {
-        background-color: #0F2537;
-        color: #FFFFFF;
-        padding: 1.8rem 2rem;
-        border-radius: 8px;
+        background: linear-gradient(135deg, #0F2537 0%, #1B3B5A 100%) !important;
+        padding: 1.8rem 2.2rem;
+        border-radius: 10px;
         margin-bottom: 1.5rem;
         border-left: 6px solid #C0392B;
+        box-shadow: 0 4px 12px rgba(15, 37, 55, 0.10);
     }
-    .exec-banner h1 {
-        color: #FFFFFF;
-        font-size: 1.9rem;
-        margin-bottom: 0.4rem;
-        font-weight: 700;
+    .exec-banner .banner-title {
+        color: #FFFFFF !important;
+        font-size: 1.9rem !important;
+        margin: 0 0 0.5rem 0 !important;
+        font-weight: 700 !important;
+        line-height: 1.2 !important;
     }
     .exec-banner p {
-        color: #D6E0E8;
-        font-size: 0.98rem;
-        margin-bottom: 0.2rem;
+        color: #E2E8F0 !important;
+        font-size: 0.96rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    .exec-banner strong {
+        color: #FFFFFF !important;
     }
 
-    /* Styled KPI Cards */
-    div[data-testid="metric-container"] {
-        background-color: #F8FAFC;
+    /* CUSTOM LIGHT KPI CARDS (FIXES DARK DELTA PILLS) */
+    .kpi-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-top: 4px solid #0F2537;
+        padding: 1.15rem 1.25rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+    .kpi-label {
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #64748B !important;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 0.35rem;
+    }
+    .kpi-value {
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: #0F2537 !important;
+        line-height: 1.15;
+        margin-bottom: 0.45rem;
+    }
+    .kpi-badge-neutral {
+        display: inline-block;
+        background-color: #F1F5F9;
+        color: #334155 !important;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+    }
+    .kpi-badge-pos {
+        display: inline-block;
+        background-color: #DCFCE7;
+        color: #166534 !important;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+    }
+    .kpi-badge-alert {
+        display: inline-block;
+        background-color: #FEE2E2;
+        color: #991B1B !important;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+    }
+
+    /* CLEAN TAB STYLING */
+    button[data-baseweb="tab"] {
+        background-color: transparent !important;
+        color: #475569 !important;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding-bottom: 0.6rem;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #0F2537 !important;
+        border-bottom-color: #C0392B !important;
+    }
+
+    /* TOP CHAPTER INTRO BANNER */
+    .insight-box {
+        background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
         border-left: 4px solid #0F2537;
-        padding: 1rem 1.2rem;
-        border-radius: 6px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        padding: 1rem 1.3rem;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 1.2rem;
+        color: #1E293B !important;
+        font-size: 0.95rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
 
-    /* Insight Callout Box */
-    .insight-box {
-        background-color: #F1F5F9;
-        border-left: 4px solid #2B5C8F;
-        padding: 1rem 1.2rem;
-        border-radius: 0 6px 6px 0;
-        margin-bottom: 1.2rem;
-        color: #1E293B;
-        font-size: 0.95rem;
+    /* CHART EXPLANATION CARD */
+    .chart-explain {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-left: 4px solid #2563EB;
+        padding: 1rem 1.25rem;
+        border-radius: 0 8px 8px 0;
+        margin-top: 0.35rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 5px rgba(15, 23, 42, 0.03);
+    }
+    .chart-explain-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #1D4ED8 !important;
+        margin-bottom: 0.35rem;
+    }
+    .chart-explain p {
+        font-size: 0.91rem;
+        line-height: 1.55;
+        color: #334155 !important;
+        margin-bottom: 0;
+    }
+
+    /* STRATEGY & LIMITATIONS WHITE CARDS */
+    .strategy-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        padding: 1.4rem 1.6rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+        height: 100%;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. LOAD CLEAN DATA (WITH FALLBACK SAFETY)
+# 2. LOAD CLEAN DATA
 # ---------------------------------------------------------
-import os
 @st.cache_data
 def load_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -125,19 +237,53 @@ def load_data():
     return df_sales, df_hyb
 
 df_sales, df_hyb = load_data()
+
+# Helper to enforce crisp Light Mode on all Plotly charts & axes
+def style_light_chart(fig, title_text, y_title="", x_title="", height=440, legend_bottom=False, hovermode="x unified"):
+    legend_cfg = (
+        dict(orientation="h", yanchor="top", y=-0.18, xanchor="center", x=0.5, font=dict(color="#1E293B", size=12))
+        if legend_bottom else
+        dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#1E293B", size=12))
+    )
+    fig.update_layout(
+        title=dict(text=f"<b>{title_text}</b>", font=dict(size=16, color="#0F2537", family="sans-serif"), x=0.01),
+        template="plotly_white",
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#FFFFFF",
+        font=dict(color="#1E293B", family="sans-serif"),
+        height=height,
+        hovermode=hovermode,
+        legend=legend_cfg,
+        margin=dict(t=65, b=85 if legend_bottom else 35, l=55, r=25)
+    )
+    fig.update_xaxes(
+        title=dict(text=x_title, font=dict(color="#334155", size=12)),
+        showgrid=False,
+        linecolor="#CBD5E1",
+        tickfont=dict(color="#334155", size=11)
+    )
+    fig.update_yaxes(
+        title=dict(text=y_title, font=dict(color="#334155", size=12)),
+        gridcolor="#E2E8F0",
+        gridwidth=1,
+        linecolor="#CBD5E1",
+        tickfont=dict(color="#334155", size=11)
+    )
+    return fig
+
 # ---------------------------------------------------------
 # 3. EXECUTIVE HEADER BANNER
 # ---------------------------------------------------------
 st.markdown("""
 <div class="exec-banner">
-    <h1>Reshaping Mexico's Light-Vehicle Market (2016–2026)</h1>
+    <div class="banner-title">Reshaping Mexico's Light-Vehicle Market (2016–2026)</div>
     <p><strong>Role:</strong> Market Strategy Analyst (Legacy Automaker in Mexico) &nbsp;|&nbsp; <strong>Stakeholders:</strong> Executive Committee & Product Planning</p>
     <p><strong>Strategic Decision:</strong> How should we reallocate our 2027 product portfolio across SUVs, sedans, and electrified powertrains amid Asian brand expansion and the January 2026 tariff shift?</p>
 </div>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. REDESIGNED SIDEBAR: INTERACTIVE CONTROLS
+# 4. SIDEBAR: INTERACTIVE CONTROLS
 # ---------------------------------------------------------
 with st.sidebar:
     st.markdown("### Analytical Controls")
@@ -206,7 +352,7 @@ if sel_states:
 df_hyb_f = df_hyb[mask_hyb].copy()
 
 # ---------------------------------------------------------
-# 5. EXECUTIVE KPIs
+# 5. EXECUTIVE KPIs (CUSTOM HIGH-CONTRAST LIGHT CARDS)
 # ---------------------------------------------------------
 total_units = df_sales_f['UNI_VEH'].sum()
 sales_2026 = df_sales_f[df_sales_f['ANIO'] == 2026]['UNI_VEH'].sum()
@@ -223,11 +369,44 @@ chinese_share_2026 = (
 ) if sales_2026 > 0 else 0
 total_electrified = df_hyb_f['TOTAL_ELECTRIFICADOS'].sum()
 
+yoy_badge_class = "kpi-badge-pos" if yoy_2026 >= 0 else "kpi-badge-alert"
+
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("Cumulative Retail Sales", f"{total_units:,.0f}", f"{year_range[0]}–{year_range[1]}")
-k2.metric("2026 YTD Sales (Jan–Oct)", f"{sales_2026:,.0f}", f"{yoy_2026:+.1f}% YoY vs 2025")
-k3.metric("Chinese Brand Share (2026)", f"{chinese_share_2026:.1f}%", "RAIAVL reporting panel only")
-k4.metric("Electrified Vehicles Sold", f"{total_electrified:,.0f}", "HEV + PHEV + BEV")
+with k1:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">Cumulative Retail Sales</div>
+        <div class="kpi-value">{total_units:,.0f}</div>
+        <span class="kpi-badge-neutral">{year_range[0]}–{year_range[1]} Window</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+with k2:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">2026 YTD Sales (Jan–Oct)</div>
+        <div class="kpi-value">{sales_2026:,.0f}</div>
+        <span class="{yoy_badge_class}">{yoy_2026:+.1f}% YoY vs 2025</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+with k3:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">Chinese Brand Share (2026)</div>
+        <div class="kpi-value">{chinese_share_2026:.1f}%</div>
+        <span class="kpi-badge-alert">RAIAVL reporting panel only</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+with k4:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">Electrified Vehicles Sold</div>
+        <div class="kpi-value">{total_electrified:,.0f}</div>
+        <span class="kpi-badge-pos">HEV + PHEV + BEV</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -245,7 +424,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.markdown("""
     <div class="insight-box">
-        <strong>Key Takeaway:</strong> Stripping out December seasonality via a 12-month rolling total shows that Mexico's light-vehicle market required nearly four years to recover from the 2020 pandemic and 2021–2022 semiconductor bottlenecks. Growth since 2023 has been heavily shaped by new entrants and the January 2026 tariff realignment.
+        <strong>Chapter Overview:</strong> To evaluate structural industry health without seasonal distortion, we track light-vehicle demand across a full decade alongside major supply, health, and trade shocks.
     </div>
     """, unsafe_allow_html=True)
 
@@ -260,109 +439,152 @@ with tab1:
     ts_total['ROLLING_12M'] = ts_total['UNI_VEH'].rolling(12).sum()
 
     if "12-Month Rolling" in time_view:
-        fig_ts = px.line(
+        fig_ts = px.area(
             ts_total.dropna(subset=['ROLLING_12M']),
             x='FECHA',
-            y='ROLLING_12M',
-            labels={'FECHA': '', 'ROLLING_12M': 'Trailing 12-Month Units'}
+            y='ROLLING_12M'
         )
-        fig_ts.update_traces(line=dict(color='#0F2537', width=3.2))
+        fig_ts.update_traces(
+            line=dict(color='#0F2537', width=3),
+            fillcolor='rgba(15, 37, 55, 0.08)',
+            hovertemplate='<b>%{x|%b %Y}</b><br>Trailing 12M Sales: %{y:,.0f} units<extra></extra>'
+        )
         chart_title = "12-Month Rolling Light-Vehicle Retail Sales (Units)"
+        y_axis_label = "Trailing 12-Month Units"
     else:
         fig_ts = px.bar(
             ts_monthly,
             x='FECHA',
             y='UNI_VEH',
             color='ESTATUS_EN',
-            labels={'FECHA': '', 'UNI_VEH': 'Monthly Units', 'ESTATUS_EN': 'Data Status'},
             color_discrete_map={'Revised Figures': '#0F2537', 'Preliminary Figures': '#D97706'}
         )
         chart_title = "Monthly Retail Sales Breakdown (Revised vs. Preliminary)"
+        y_axis_label = "Monthly Units Sold"
 
     events = [
-        ("2020-04-01", "COVID-19 Shock", "left"),
-        ("2021-09-01", "Chip Shortage", "right"),
-        ("2023-06-01", "Chinese Brand Wave", "left"),
-        ("2026-01-01", "Jan 2026 Tariffs", "right")
+        ("2020-04-01", "COVID-19 Shock", "right", 1.03),
+        ("2021-09-01", "Chip Shortage", "left", 0.90),
+        ("2023-06-01", "Chinese Brand Wave", "left", 1.03),
+        ("2026-01-01", "Jan 2026 Tariffs", "right", 1.03)
     ]
 
-    for event_date, event_label, align in events:
+    for event_date, event_label, align, y_pos in events:
         if year_range[0] <= int(event_date[:4]) <= year_range[1]:
             fig_ts.add_vline(x=event_date, line_dash="dot", line_color="#C0392B", line_width=1.5)
             fig_ts.add_annotation(
-                x=event_date, y=1.03, yref="paper", text=event_label,
-                showarrow=False, font=dict(color="#C0392B", size=11, family="Arial"),
-                xanchor=align
+                x=event_date, y=y_pos, yref="paper", text=f"<b>{event_label}</b>",
+                showarrow=False, font=dict(color="#C0392B", size=11),
+                xanchor=align, bgcolor="rgba(255,255,255,0.9)", bordercolor="#FECACA", borderwidth=1, borderpad=3
             )
 
-    fig_ts.update_layout(
-        title=dict(text=chart_title, font=dict(size=16, color="#0F2537")),
-        template="plotly_white",
-        height=460,
-        hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(t=60, b=20)
-    )
+    fig_ts = style_light_chart(fig_ts, chart_title, y_title=y_axis_label, height=460, legend_bottom=False)
     st.plotly_chart(fig_ts, use_container_width=True)
+
+    st.markdown("""
+    <div class="chart-explain">
+        <div class="chart-explain-title">What This Chart Means</div>
+        <p><strong>1. Why 12-Month Rolling Matters:</strong> Monthly Mexican auto sales spike every December due to year-end fleet purchases and promotions. Summing the trailing 12 months removes seasonal noise to reveal true underlying momentum.<br>
+        <strong>2. Four-Year Recovery Cycle:</strong> After peaking above 1.6M annual units in 2016–2017, the April 2020 pandemic lockdown drove trailing volume down toward ~950K units. Global semiconductor shortages (2021–2022) prolonged the trough, delaying full recovery until late 2023.<br>
+        <strong>3. Recent Inflection Points:</strong> Expansion from 2023 onward was propelled by new Asian entrants joining the market, while the January 2026 tariff adjustment marks a new regulatory regime affecting non-USMCA imports. Note that the most recent 2026 bars (in amber) represent preliminary figures subject to minor automaker revisions.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # === TAB 2: SEGMENT & COMPETITIVE SHIFT ===
 with tab2:
     st.markdown("""
     <div class="insight-box">
-        <strong>Key Takeaway:</strong> Two structural forces are squeezing legacy automakers: consumer migration from traditional subcompact/compact sedans toward SUVs, and the rapid entry of Chinese brands into the RAIAVL panel since 2022.
+        <strong>Chapter Overview:</strong> Beyond aggregate volume, two structural forces are reshaping competitive advantage in Mexico: consumer migration toward SUVs and the rapid scaling of Chinese brands.
     </div>
     """, unsafe_allow_html=True)
 
     c_left, c_right = st.columns(2)
 
     with c_left:
+        # Remade as clean multi-line trend of market share (%) so every segment trajectory is crisp & legible
         df_seg = df_sales_f.groupby(['ANIO', 'SEGMENTO'], as_index=False)['UNI_VEH'].sum()
-        fig_seg = px.area(
+        year_totals = df_seg.groupby('ANIO')['UNI_VEH'].transform('sum')
+        df_seg['SHARE_PCT'] = (df_seg['UNI_VEH'] / year_totals) * 100
+
+        seg_colors = {
+            "SUV's": "#C0392B",
+            "Subcompactos": "#0F2537",
+            "Compactos": "#2563EB",
+            "Pick Ups": "#0D9488",
+            "Minivans": "#D97706",
+            "De Lujo": "#7C3AED",
+            "Deportivos": "#64748B"
+        }
+
+        fig_seg = px.line(
             df_seg,
             x='ANIO',
-            y='UNI_VEH',
+            y='SHARE_PCT',
             color='SEGMENTO',
-            groupnorm='percent',
-            labels={'ANIO': '', 'UNI_VEH': 'Share of Retail Market (%)', 'SEGMENTO': 'Segment'},
-            color_discrete_sequence=px.colors.qualitative.Safe
+            markers=True,
+            color_discrete_map=seg_colors
         )
-        fig_seg.update_layout(
-            title=dict(text="Market Share by Vehicle Segment (%)", font=dict(size=15, color="#0F2537")),
-            template="plotly_white",
-            height=430,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.28, xanchor="center", x=0.5),
-            margin=dict(t=50, b=80)
+        fig_seg.update_traces(line=dict(width=2.6), marker=dict(size=6))
+        fig_seg = style_light_chart(
+            fig_seg,
+            "Segment Market Share Trajectory (2016–2026)",
+            y_title="Share of Retail Market (%)",
+            height=440,
+            legend_bottom=True
         )
+        fig_seg.update_yaxes(ticksuffix="%")
         st.plotly_chart(fig_seg, use_container_width=True)
+
+        st.markdown("""
+        <div class="chart-explain">
+            <div class="chart-explain-title">What This Chart Means</div>
+            <p><strong>SUVs Overtook Entry Sedans as Mexico's Core Segment:</strong> Tracking each segment's share directly reveals a decisive crossover: <em>SUVs</em> (red line) surged from ~21% of the market in 2016 to over 40% by 2026, while <em>Subcompactos</em> and <em>Compactos</em> steadily contracted. Defending profit pools requires reallocating North American plant capacity toward small and compact crossovers.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     with c_right:
         df_origen = df_sales_f.groupby(['ANIO', 'ORIGEN_MARCA'], as_index=False)['UNI_VEH'].sum()
+        yr_tot_orig = df_origen.groupby('ANIO')['UNI_VEH'].transform('sum')
+        df_origen['PCT_LABEL'] = df_origen.apply(
+            lambda r: f"{(r['UNI_VEH']/yr_tot_orig[r.name]*100):.1f}%" if r['ORIGEN_MARCA'] == 'Chinese Brands (in RAIAVL)' and (r['UNI_VEH']/yr_tot_orig[r.name]*100) >= 1.0 else "",
+            axis=1
+        )
+
         fig_origen = px.bar(
             df_origen,
             x='ANIO',
             y='UNI_VEH',
             color='ORIGEN_MARCA',
             barmode='stack',
-            labels={'ANIO': '', 'UNI_VEH': 'Annual Units', 'ORIGEN_MARCA': ''},
+            text='PCT_LABEL',
             color_discrete_map={
                 'Traditional / Other Brands': '#0F2537',
                 'Chinese Brands (in RAIAVL)': '#C0392B'
             }
         )
-        fig_origen.update_layout(
-            title=dict(text="Annual Sales: Legacy vs. Chinese Brands (in RAIAVL)", font=dict(size=15, color="#0F2537")),
-            template="plotly_white",
-            height=430,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.28, xanchor="center", x=0.5),
-            margin=dict(t=50, b=80)
+        fig_origen.update_traces(textposition='outside', textfont=dict(color='#C0392B', size=11, family='sans-serif'))
+        fig_origen = style_light_chart(
+            fig_origen,
+            "Annual Sales: Legacy vs. Chinese Brands (in RAIAVL)",
+            y_title="Annual Units Sold",
+            height=440,
+            legend_bottom=True
         )
+        fig_origen.update_yaxes(range=[0, df_origen.groupby('ANIO')['UNI_VEH'].sum().max() * 1.15])
         st.plotly_chart(fig_origen, use_container_width=True)
+
+        st.markdown("""
+        <div class="chart-explain">
+            <div class="chart-explain-title">What This Chart Means</div>
+            <p><strong>Rapid Scaling of Asian Challengers:</strong> Chinese brands reporting to INEGI (MG Motor, Chirey/Omoda, JAC, Changan, Geely, Great Wall, GAC) scaled from under 1% prior to 2021 to <strong>11.8%</strong> of the RAIAVL panel in 2026. Because major players like <strong>BYD</strong> do not report to INEGI, actual competitive pressure in entry SUVs and sedans is even higher than shown.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # === TAB 3: ELECTROMOBILITY ADOPTION ===
 with tab3:
     st.markdown("""
     <div class="insight-box">
-        <strong>Key Takeaway:</strong> Electrification in Mexico is overwhelmingly a conventional hybrid (HEV) story rather than pure battery-electric (BEV), with demand heavily concentrated in five metropolitan states.
+        <strong>Chapter Overview:</strong> Crossing retail volume with INEGI's state-level electromobility registry reveals which powertrain technologies Mexican buyers actually adopt—and where demand is geographically concentrated.
     </div>
     """, unsafe_allow_html=True)
 
@@ -388,21 +610,27 @@ with tab3:
             x='ANIO',
             y='Units',
             color='Technology',
-            labels={'ANIO': '', 'Units': 'Units Sold', 'Technology': ''},
             color_discrete_map={
-                'Conventional Hybrid (HEV)': '#1E8449',
-                'Plug-In Hybrid (PHEV)': '#2E86C1',
-                'Battery Electric (BEV)': '#F39C12'
+                'Conventional Hybrid (HEV)': '#0D9488',
+                'Plug-In Hybrid (PHEV)': '#2563EB',
+                'Battery Electric (BEV)': '#F59E0B'
             }
         )
-        fig_tech.update_layout(
-            title=dict(text="Electrified Sales by Powertrain Technology", font=dict(size=15, color="#0F2537")),
-            template="plotly_white",
-            height=430,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
-            margin=dict(t=50, b=70)
+        fig_tech = style_light_chart(
+            fig_tech,
+            "Electrified Sales by Powertrain Technology",
+            y_title="Annual Units Sold",
+            height=440,
+            legend_bottom=True
         )
         st.plotly_chart(fig_tech, use_container_width=True)
+
+        st.markdown("""
+        <div class="chart-explain">
+            <div class="chart-explain-title">What This Chart Means</div>
+            <p><strong>Hybrids (HEV) Lead the Transition:</strong> Unlike markets where pure battery-electric vehicles (BEVs) dominate policy narratives, Mexico's electrification wave is overwhelmingly driven by conventional hybrids (HEVs). HEVs eliminate range anxiety and public charging bottlenecks while offering immediate fuel economy gains—making them the highest-ROI near-term powertrain bet for 2027.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     with h_right:
         top_states = (
@@ -417,44 +645,69 @@ with tab3:
             x='TOTAL_ELECTRIFICADOS',
             y='ESTADO',
             orientation='h',
-            labels={'TOTAL_ELECTRIFICADOS': 'Cumulative Units', 'ESTADO': ''}
+            text='TOTAL_ELECTRIFICADOS'
         )
-        fig_est.update_traces(marker_color='#1E8449')
-        fig_est.update_layout(
-            title=dict(text="Top 10 Mexican States in Hybrid & EV Adoption", font=dict(size=15, color="#0F2537")),
-            template="plotly_white",
-            height=430,
-            margin=dict(t=50, b=40)
+        fig_est.update_traces(
+            marker_color='#0D9488',
+            texttemplate='%{text:,.0f}',
+            textposition='outside',
+            textfont=dict(color='#0F2537', size=11)
         )
+        fig_est = style_light_chart(
+            fig_est,
+            "Top 10 Mexican States in Hybrid & EV Adoption",
+            x_title="Cumulative Electrified Units",
+            height=440,
+            legend_bottom=False,
+            hovermode="y unified"
+        )
+        fig_est.update_xaxes(range=[0, top_states['TOTAL_ELECTRIFICADOS'].max() * 1.18], showgrid=True, gridcolor="#E2E8F0")
+        fig_est.update_yaxes(showgrid=False)
+        fig_est.update_layout(margin=dict(t=65, b=85, l=115, r=35))
         st.plotly_chart(fig_est, use_container_width=True)
+
+        st.markdown("""
+        <div class="chart-explain">
+            <div class="chart-explain-title">What This Chart Means</div>
+            <p><strong>Extreme Geographic Concentration:</strong> Electrified vehicle adoption is heavily concentrated in five major urban hubs—led by Mexico City, State of Mexico, Nuevo Leon, Jalisco, and Puebla—where higher incomes, corporate fleets, and local environmental exemptions (such as <em>Hoy No Circula</em>) incentivize adoption. Outside these hubs, internal combustion remains dominant.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # === TAB 4: STRATEGY, LIMITATIONS & COVERAGE ===
 with tab4:
-    st.subheader("Methodological Honesty & RAIAVL Coverage Gaps")
-    st.warning("""
-    **Critical Coverage Caveats (Vintage: October 2026):**
-    * **Non-Reporting Brands:** RAIAVL relies on voluntary reporting from AMIA/INEGI-affiliated automakers. **BYD and Tesla do not report to INEGI**, meaning actual BEV volumes and Chinese brand penetration in Mexico are understated here.
-    * **Panel Entries & Exits:** Aggregate series jumps partly reflect registry panel changes—for instance, **GAC** joined with retroactive data back to January 2024, while **MOTORNATION** exits the registry starting November 2026.
-    * **Brand Harmonization:** *Chrysler, Fiat, Peugeot, Alfa Romeo, and Leapmotor* were consolidated under **Stellantis**; *JETOUR* and *Jetour Soueast* were unified to ensure decade-long consistency.
-    * **Preliminary vs. Revised Data:** Recent 2026 months contain *Preliminary Figures* subject to automaker revisions.
-    """)
+    st.markdown("""
+    <div class="insight-box">
+        <strong>Methodological Transparency & Coverage Caveats (Vintage: October 2026):</strong><br>
+        • <strong>Non-Reporting Brands:</strong> RAIAVL is based on voluntary reporting by AMIA/INEGI-affiliated automakers. <strong>BYD and Tesla do not report to INEGI</strong>, meaning actual BEV volumes and Chinese market share are understated.<br>
+        • <strong>Panel Entries & Exits:</strong> Aggregate movements partly reflect registry panel changes—for example, <strong>GAC</strong> joined with retroactive data back to Jan 2024, while <strong>MOTORNATION</strong> exits starting Nov 2026.<br>
+        • <strong>Brand Harmonization:</strong> <em>Chrysler, Fiat, Peugeot, Alfa Romeo, and Leapmotor</em> are consolidated under <strong>Stellantis</strong>; <em>JETOUR</em> and <em>Jetour Soueast</em> are unified for decade-long consistency.
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("---")
     s1, s2 = st.columns(2)
 
     with s1:
-        st.subheader("Actionable Recommendations for 2027")
         st.markdown("""
-        1. **Lead with Conventional Hybrids (HEV):** Allocate near-term product engineering and marketing toward HEV trims rather than pure BEVs, matching Mexican infrastructure realities and consumer demand.
-        2. **Defend Core SUVs Over Entry Sedans:** Concentrate North American plant capacity on compact and subcompact SUVs, where profit pools and structural demand are expanding.
-        3. **Deploy a Tiered Geographic Rollout:** Focus electrified inventory and dealer incentives on the top 5 adopting states (Mexico City, State of Mexico, Nuevo Leon, Jalisco, and Puebla).
-        4. **Capitalize on the January 2026 Tariff Shift:** Leverage USMCA-compliant regional production to recapture share from non-FTA imported vehicles facing higher duties.
-        """)
+        <div class="strategy-card">
+            <h3 style="color:#0F2537; margin-top:0;">Actionable Recommendations for 2027</h3>
+            <ol style="color:#334155; line-height:1.65; font-size:0.94rem;">
+                <li><strong>Lead with Conventional Hybrids (HEV):</strong> Prioritize HEV trims over pure BEVs in near-term product launches and marketing spend to match Mexican consumer demand and charging infrastructure realities.</li>
+                <li><strong>Defend Core SUVs Over Entry Sedans:</strong> Reallocate North American manufacturing capacity toward compact and subcompact SUVs, where structural demand and margin pools are expanding.</li>
+                <li><strong>Deploy a Tiered Geographic Rollout:</strong> Concentrate electrified inventory and dealer incentives in the top 5 adopting states (CDMX, State of Mexico, Nuevo Leon, Jalisco, Puebla) while defending share with efficient ICE models elsewhere.</li>
+                <li><strong>Capitalize on the January 2026 Tariff Shift:</strong> Leverage USMCA-compliant regional production to recapture share from non-FTA imported vehicles facing higher duties.</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
 
     with s2:
-        st.subheader("What RAIAVL Cannot See (Limitations)")
         st.markdown("""
-        * **Blind Spots in EV & Chinese Competition:** Without BYD and Tesla, RAIAVL cannot capture the full competitive threat in entry-level EVs. Management must triangulate this dashboard with state vehicle registration (emplacamiento) and customs import data.
-        * **No Pricing or Incentive Visibility:** The registry tracks physical unit volumes (`UNI_VEH`), omitting transaction prices, financing rates, and dealer margin compression.
-        * **No Plant-Level Output in Retail Tables:** Retail sales distinguish *Domestic* vs. *Imported* origin, but do not identify specific assembly plants or regional content percentages.
-        """)
+        <div class="strategy-card">
+            <h3 style="color:#0F2537; margin-top:0;">What RAIAVL Cannot See (Limitations)</h3>
+            <ul style="color:#334155; line-height:1.65; font-size:0.94rem;">
+                <li><strong>Competitive Blind Spots in EVs:</strong> Without BYD and Tesla, RAIAVL cannot capture the full competitive threat in entry-level electric vehicles. Management must triangulate this dashboard with state vehicle registration (<em>emplacamiento</em>) and customs import data.</li>
+                <li><strong>No Pricing or Incentive Visibility:</strong> The registry tracks physical unit volumes (<code>UNI_VEH</code>), omitting transaction prices, financing subsidies, and dealer margin compression.</li>
+                <li><strong>No Plant-Level Output in Retail Tables:</strong> Retail sales distinguish between <em>Domestic</em> and <em>Imported</em> origin, but do not disclose specific assembly plants or regional value content percentages.</li>
+                <li><strong>Preliminary Data Revisions:</strong> Recent 2026 monthly figures include preliminary automaker reports subject to future adjustment.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
